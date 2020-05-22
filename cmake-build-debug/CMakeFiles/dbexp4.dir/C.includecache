@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+F:/Projects/CLion/dbexp4/extmem.h
+
+F:/Projects/CLion/dbexp4/task.c
+stdio.h
+-
+stdlib.h
+-
+task.h
+F:/Projects/CLion/dbexp4/task.h
+extmem.h
+F:/Projects/CLion/dbexp4/extmem.h
+utils.h
+F:/Projects/CLion/dbexp4/utils.h
+
+F:/Projects/CLion/dbexp4/task.h
+
+F:/Projects/CLion/dbexp4/utils.h
+extmem.h
+F:/Projects/CLion/dbexp4/extmem.h
+
