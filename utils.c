@@ -165,7 +165,7 @@ int cmp(const void *a, const void *b) {
 int cmpInBlock(unsigned char *blk, int tuple_num, int *res) {
     int res_pos = -1;
     int val[2];
-    res[0] = INT_MAX;
+    res[0] = 1000;
 
     for (int i = 0; i < tuple_num; i++) {
         if (readProperty(blk, i, 2, val) == -1) {

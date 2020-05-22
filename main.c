@@ -8,7 +8,9 @@ int main() {
 //        perror("Task 1 failed.\n");
 //    }
 
-    TPMMS(1, 16, 351, 4);
+//    TPMMS(1, 16, 351, 4);
+
+    TPMMS(17, 32, 367, 6);
 
     return 0;
 }

@@ -113,7 +113,7 @@ int TPMMS(int addr, int block_num, int out_start_addr, int set_block_num) {
                 return -1;
             }
 
-            set_addr[i / set_block_num][i % set_block_num] = addr;
+            set_addr[i / set_block_num][i % set_block_num] = addr + 100;
 
             count++;
 
@@ -124,6 +124,8 @@ int TPMMS(int addr, int block_num, int out_start_addr, int set_block_num) {
             }
 
             if ((i + 1) % set_block_num == 0 || i == block_num - 1) {
+                counts[i / set_block_num] = count;
+
                 // 对一个子集合进行排序
                 sort(blk, count, 7, 2);
 
@@ -138,7 +140,7 @@ int TPMMS(int addr, int block_num, int out_start_addr, int set_block_num) {
 
                     writeAddress(blk[j], 7, next_addr + 100);
 
-                    if (writeBlockToDisk(blk[j], set_addr[i / set_block_num][j] + 100, &buf) == -1) {
+                    if (writeBlockToDisk(blk[j], set_addr[i / set_block_num][j], &buf) == -1) {
                         perror("Write to block failed.\n");
                         return -1;
                     }
@@ -211,39 +213,28 @@ int TPMMS(int addr, int block_num, int out_start_addr, int set_block_num) {
 
             int blk_index = set_index[pos] / 7;
 
-            if (blk_index == set_block_num) {
+            if (blk_index >= counts[pos]) {
                 // 超过一个子集合的块数，该子集合已经读完
                 // 向 compare 块中写入 '\0'
                 writeProperty(cmp, pos, 2, NULL);
-            } else if (set_index[pos] % 7 == 0) {
-                // 需要读取下一块
-                freeBlockInBuffer(blk[pos], &buf);
-
-                if ((blk[pos] = readBlockFromDisk(set_addr[pos][blk_index], &buf)) == NULL) {
-                    perror("Read block failed.\n");
-                    return -1;
-                }
-            }
-                {
-                if (next_blk != cur_set_blk_index[pos]) {
-                    // 下一个要读的块不在内存中
-                    // 释放当前块并读入下一个块
+            } else {
+                if (set_index[pos] % 7 == 0) {
+                    // 需要读取下一块
                     freeBlockInBuffer(blk[pos], &buf);
-                    if ((blk[pos] = readBlockFromDisk(set_addr[pos][next_blk], &buf)) == NULL) {
+
+                    if ((blk[pos] = readBlockFromDisk(set_addr[pos][blk_index], &buf)) == NULL) {
                         perror("Read block failed.\n");
                         return -1;
                     }
-                    cur_set_blk_index[pos] = next_blk;
                 }
 
                 int val[2];
 
                 if (readProperty(blk[pos], set_index[pos] % 7, 2, val) == -1) {
-                    perror("Read property failed.\n");
-                    return -1;
+                    writeProperty(cmp, pos, 2, NULL);
+                } else {
+                    writeProperty(cmp, pos, 2, val);
                 }
-
-                writeProperty(cmp, pos, 2, val);
             }
         }
         // 输出缓冲区是在读入一个块前判断满没满
