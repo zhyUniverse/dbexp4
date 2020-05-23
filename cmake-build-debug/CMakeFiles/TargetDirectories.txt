@@ -1,3 +1,0 @@
-D:/Projects/C/dbexp4/cmake-build-debug/CMakeFiles/dbexp4.dir
-D:/Projects/C/dbexp4/cmake-build-debug/CMakeFiles/edit_cache.dir
-D:/Projects/C/dbexp4/cmake-build-debug/CMakeFiles/rebuild_cache.dir

@@ -32,9 +32,7 @@ int RSBLS(int addr, int block_num, int out_addr) {
     int res_num = 0, io_num = 0;
 
     for (int i = 0; i < block_num; i++) {
-        blk = readBlockFromDisk(addr, &buf);
-
-        if (blk == NULL) {
+        if ((blk = readBlockFromDisk(addr, &buf)) == NULL) {
             perror("Read block failed.\n");
         }
 
@@ -487,7 +485,7 @@ int SBCO(int r_addr, int s_addr, int r_block_num, int s_block_num, int out_addr)
     }
 
     OutBlk out_blk;
-    if (InitOutBlock(&out_blk, &buf, 7, 401) == -1) {
+    if (InitOutBlock(&out_blk, &buf, 7, out_addr) == -1) {
         perror("Out block init failed.\n");
         return -1;
     }
@@ -495,6 +493,7 @@ int SBCO(int r_addr, int s_addr, int r_block_num, int s_block_num, int out_addr)
     int i = 0, j = 0;
 
     int s_start = -1;
+    int s_start_addr = -1;
 
     unsigned char *r_blk, *s_blk;
 
@@ -509,44 +508,206 @@ int SBCO(int r_addr, int s_addr, int r_block_num, int s_block_num, int out_addr)
     }
 
     int r_val[2], s_val[2];
+    int pre_r_val = -1;
+    int r_cur_blk = 0, s_cur_blk = 0;
+    int con_1 = 0, con_2 = 0;
+
+    int res_count = 0;
 
     while (readProperty(r_blk, i % 7, 2, r_val) != -1 && readProperty(s_blk, j % 7, 2, s_val) != -1) {
-        if (r_val[0] < s_val[0]) {
-            i++;
-        } else if (r_val[0] == s_val[0]) {
-            if (s_start == -1) {
-                s_start = j;
-            } else {
-                j = s_start;
-            }
-            putInOutBlock(&out_blk, &buf, 2, s_val);
-            putInOutBlock(&out_blk, &buf, 2, r_val);
-            j++;
-        } else {
-            s_start = -1;
-            j++;
-        }
+        if (pre_r_val == r_val[0] && con_1 == 1 && con_2 == 1) {
+            j = s_start;
+            s_addr = s_start_addr;
 
-        if (i / 7 >= r_block_num || j / 7 >= s_block_num) {
-            break;
-        }
-
-        if (i % 7 == 0 && i != 0) {
-            freeBlockInBuffer(r_blk, &buf);
-
-            if ((r_blk = readBlockFromDisk(r_addr++, &buf)) == NULL) {
-                perror("Read block failed.\n");
-                return -1;
-            }
-        }
-
-        if (j % 7 == 0 && j != 0) {
+            // R 中连续两个 A 相等的元组，把 S 的指针移回去
             freeBlockInBuffer(s_blk, &buf);
 
             if ((s_blk = readBlockFromDisk(s_addr++, &buf)) == NULL) {
                 perror("Read block failed.\n");
                 return -1;
             }
+
+            s_cur_blk = j / 7;
+
+            con_1 = 0;
+            con_2 = 0;
+
+            continue;
+        }
+
+        if (r_val[0] < s_val[0]) {
+            pre_r_val = r_val[0];
+            con_2 = 1;
+            i++;
+        } else if (r_val[0] == s_val[0]) {
+            con_1 = 1;
+            if (s_start == -1) {
+                s_start = j;
+                s_start_addr = s_addr - 1;
+            }
+            putInOutBlock(&out_blk, &buf, 2, r_val);
+            putInOutBlock(&out_blk, &buf, 2, s_val);
+            res_count++;
+            j++;
+        } else {
+            con_1 = 0;
+            s_start = -1;
+            j++;
+        }
+
+
+
+        if (i / 7 >= r_block_num || j / 7 >= s_block_num) {
+            break;
+        }
+
+        if (i % 7 == 0 && r_cur_blk < i / 7) {
+            freeBlockInBuffer(r_blk, &buf);
+
+            if ((r_blk = readBlockFromDisk(r_addr++, &buf)) == NULL) {
+                perror("Read block failed.\n");
+                return -1;
+            }
+
+            r_cur_blk = i / 7;
+        }
+
+        if (j % 7 == 0 && s_cur_blk < j / 7) {
+            freeBlockInBuffer(s_blk, &buf);
+
+            if ((s_blk = readBlockFromDisk(s_addr++, &buf)) == NULL) {
+                perror("Read block failed.\n");
+                return -1;
+            }
+
+            s_cur_blk = j / 7;
         }
     }
+
+    freeOutBlockInBuffer(&out_blk, &buf);
+
+    printf("总共连接 %d 次.\n", res_count);
+
+    return 0;
+}
+
+int SO(int r_addr, int s_addr, int r_block_num, int s_block_num, int out_addr) {
+    // Set operation
+    // 集合操作算法
+    // 交
+
+    printf("\n****集合操作算法：交****\n");
+
+    Buffer buf;
+
+    if (!initBuffer(520, 64, &buf)) {
+        perror("Buffer init failed.\n");
+        return -1;
+    }
+
+    OutBlk out_blk;
+    if (InitOutBlock(&out_blk, &buf, 7, out_addr) == -1) {
+        perror("Out block init failed.\n");
+        return -1;
+    }
+
+    int i = 0, j = 0;
+
+    int s_start = -1;
+    int s_start_addr = -1;
+
+    unsigned char *r_blk, *s_blk;
+
+    if ((r_blk = readBlockFromDisk(r_addr++, &buf)) == NULL) {
+        perror("Read block failed.\n");
+        return -1;
+    }
+
+    if ((s_blk = readBlockFromDisk(s_addr++, &buf)) == NULL) {
+        perror("Read block failed.\n");
+        return -1;
+    }
+
+    int r_val[2], s_val[2];
+    int pre_r_val = -1;
+    int r_cur_blk = 0, s_cur_blk = 0;
+    int con_1 = 0, con_2 = 0;
+
+    int res_count = 0;
+
+    while (readProperty(r_blk, i % 7, 2, r_val) != -1 && readProperty(s_blk, j % 7, 2, s_val) != -1) {
+        if (pre_r_val == r_val[0] && con_1 == 1 && con_2 == 1) {
+            j = s_start;
+            s_addr = s_start_addr;
+
+            // R 中连续两个 A 相等的元组，把 S 的指针移回去
+            freeBlockInBuffer(s_blk, &buf);
+
+            if ((s_blk = readBlockFromDisk(s_addr++, &buf)) == NULL) {
+                perror("Read block failed.\n");
+                return -1;
+            }
+
+            s_cur_blk = j / 7;
+
+            con_1 = 0;
+            con_2 = 0;
+
+            continue;
+        }
+
+        if (r_val[0] < s_val[0]) {
+            pre_r_val = r_val[0];
+            con_2 = 1;
+            i++;
+        } else if (r_val[0] == s_val[0]) {
+            con_1 = 1;
+            if (s_start == -1) {
+                s_start = j;
+                s_start_addr = s_addr - 1;
+            }
+            if (r_val[1] == s_val[1]) {
+                printf("(X = %d, Y = %d)\n", r_val[0], r_val[1]);
+                putInOutBlock(&out_blk, &buf, 2, r_val);
+                res_count++;
+            }
+            j++;
+        } else {
+            con_1 = 0;
+            s_start = -1;
+            j++;
+        }
+
+
+
+        if (i / 7 >= r_block_num || j / 7 >= s_block_num) {
+            break;
+        }
+
+        if (i % 7 == 0 && r_cur_blk < i / 7) {
+            freeBlockInBuffer(r_blk, &buf);
+
+            if ((r_blk = readBlockFromDisk(r_addr++, &buf)) == NULL) {
+                perror("Read block failed.\n");
+                return -1;
+            }
+
+            r_cur_blk = i / 7;
+        }
+
+        if (j % 7 == 0 && s_cur_blk < j / 7) {
+            freeBlockInBuffer(s_blk, &buf);
+
+            if ((s_blk = readBlockFromDisk(s_addr++, &buf)) == NULL) {
+                perror("Read block failed.\n");
+                return -1;
+            }
+
+            s_cur_blk = j / 7;
+        }
+    }
+
+    freeOutBlockInBuffer(&out_blk, &buf);
+
+    return 0;
 }
