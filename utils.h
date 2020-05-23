@@ -22,9 +22,9 @@ int readProperty(const unsigned char *blk, int pos, int property_num, int *res);
 
 void writeProperty(unsigned char *blk, int pos, int property_num, int *val);
 
-int readAddress(const unsigned char *blk, int tuple_num, int *res);
+int readAddress(const unsigned char *blk, int block_size, int *res);
 
-void writeAddress(unsigned char *blk, int tuple_num, int val);
+void writeAddress(unsigned char *blk, int block_size, int val);
 
 void clearBlock(unsigned char *blk, int size);
 

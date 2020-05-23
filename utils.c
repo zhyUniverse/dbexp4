@@ -51,15 +51,15 @@ void writeProperty(unsigned char *blk, int pos, int property_num, int *val) {
 
 // 从一个块里读下一块地址
 // tuple_num 是一个块里元组数量
-int readAddress(const unsigned char *blk, int tuple_num, int *res) {
-    if (*(blk + tuple_num * 8) == '\0') {
+int readAddress(const unsigned char *blk, int block_size, int *res) {
+    if (*(blk + (block_size - 8)) == '\0') {
         return -1;
     }
 
     char tmpStr[9] = {'\0' * 9};
 
     for (int i = 0; i < 8; i++) {
-        tmpStr[i] = *(blk + tuple_num * 8 + i);
+        tmpStr[i] = *(blk + (block_size - 8) + i);
     }
 
     *res = strtol(tmpStr, NULL, 10);
@@ -68,12 +68,12 @@ int readAddress(const unsigned char *blk, int tuple_num, int *res) {
 }
 
 // 向一个块里写入地址
-void writeAddress(unsigned char *blk, int tuple_num, int val) {
+void writeAddress(unsigned char *blk, int block_size, int val) {
     char tmpStr[9] = {'\0' * 9};
 
     snprintf(tmpStr, 9, "%d", val);
     for (int i = 0; i < 8; i++) {
-        *(blk + tuple_num * 8 + i) = tmpStr[i];
+        *(blk + (block_size - 8) + i) = tmpStr[i];
     }
 }
 
@@ -106,7 +106,7 @@ int putInOutBlock(OutBlk *blk, Buffer *buffer, int property_num, int *val) {
 
     if (blk->index == blk->size) {
         // 输出缓冲区已满
-        writeAddress(blk->blk, 7, blk->out_addr + 1);
+        writeAddress(blk->blk, 64, blk->out_addr + 1);
         if (writeBlockToDisk(blk->blk, blk->out_addr, buffer) == -1) {
             perror("Write block failed.\n");
             return -1;
@@ -124,7 +124,7 @@ int putInOutBlock(OutBlk *blk, Buffer *buffer, int property_num, int *val) {
 int freeOutBlockInBuffer(OutBlk *blk, Buffer *buffer) {
     if (blk->index != 0) {
         // 缓冲区有数据
-        writeAddress(blk->blk, 7, blk->out_addr + 1);
+        writeAddress(blk->blk, 64, blk->out_addr + 1);
         if (writeBlockToDisk(blk->blk, blk->out_addr, buffer) == -1) {
             perror("Write block failed.\n");
             return -1;
@@ -185,42 +185,5 @@ int cmpInBlock(unsigned char *blk, int tuple_num, int *res) {
 }
 
 int findIndex(int addr, int block_num, int value, Buffer *buf) {
-    unsigned char *blk;
 
-    int cur_index = -1;
-
-    for (int i = 0; i < block_num; i++) {
-        if ((blk = readBlockFromDisk(addr, buf)) == NULL) {
-            perror("Read block failed.\n");
-            return -1;
-        }
-
-        int val[2];
-
-        for (int j = 0; j < 7; j++) {
-            if (readProperty(blk, j, 2, val) == -1) {
-                perror("Read property failed.\n");
-                return -1;
-            }
-
-            if (val[0] > value && i == 0 && j == 0) {
-                // value 小于最小值
-                return -1;
-            }
-
-            if (val[0] == value && i == 0 && j == 0) {
-                return val[1];
-            }
-            if (val[0] >= value) {
-                return cur_index;
-            } else {
-                cur_index = val[1];
-            }
-        }
-
-        if (readAddress(blk, 7, &addr) == -1) {
-            perror("Read address failed.\n");
-            return -1;
-        }
-    }
 }

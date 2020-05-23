@@ -8,7 +8,8 @@
 #include "extmem.h"
 #include "utils.h"
 
-int RSABLS(int addr, int block_num, int out_addr) {
+int RSBLS(int addr, int block_num, int out_addr) {
+    // Relation selection based on linear search
     // 基于线性搜索的关系选择算法
     printf("\n****基于线性搜索的关系选择算法****\n");
 
@@ -59,7 +60,7 @@ int RSABLS(int addr, int block_num, int out_addr) {
 
         freeBlockInBuffer(blk, &buf);
 
-        if (readAddress(blk, 7, &addr) == -1) {
+        if (readAddress(blk, 64, &addr) == -1) {
             perror("Read address failed.\n");
             return -1;
         }
@@ -78,8 +79,8 @@ int RSABLS(int addr, int block_num, int out_addr) {
 }
 
 int TPMMS(int addr, int block_num, int set_res_out_addr, int out_addr, int set_block_num) {
+    // Two-Phase Multiway Merge-Sort
     // 两阶段多路归并排序算法
-    // TODO: 优化 中间结果地址
 
     printf("\n****两阶段多路归并排序算法****\n");
 
@@ -91,7 +92,7 @@ int TPMMS(int addr, int block_num, int set_res_out_addr, int out_addr, int set_b
     }
 
     // 子集合的数量
-    int set_num = block_num / set_block_num + (block_num % set_block_num == 0 ? 0 : 1);
+    const int set_num = block_num / set_block_num + (block_num % set_block_num == 0 ? 0 : 1);
 
     // 每个子集合中各个块的地址
     // 本实验中块地址是顺序的所以没啥必要
@@ -117,7 +118,7 @@ int TPMMS(int addr, int block_num, int set_res_out_addr, int out_addr, int set_b
             count++;
 
             // 读取下一个数据块的地址
-            if (readAddress(blk[i % set_block_num], 7, &addr) == -1) {
+            if (readAddress(blk[i % set_block_num], 64, &addr) == -1) {
                 perror("Read address failed.\n");
                 return -1;
             }
@@ -132,12 +133,12 @@ int TPMMS(int addr, int block_num, int set_res_out_addr, int out_addr, int set_b
 
                 // 写回
                 for (int j = 0; j < count; j++) {
-                    if (readAddress(blk[j], 7, &next_addr) == -1) {
+                    if (readAddress(blk[j], 64, &next_addr) == -1) {
                         perror("Read address failed.\n");
                         return -1;
                     }
 
-                    writeAddress(blk[j], 7, set_addr + 1);
+                    writeAddress(blk[j], 64, set_addr + 1);
 
                     if (writeBlockToDisk(blk[j], set_addr++, &buf) == -1) {
                         perror("Write to block failed.\n");
@@ -223,7 +224,8 @@ int TPMMS(int addr, int block_num, int set_res_out_addr, int out_addr, int set_b
                     // 需要读取下一块
                     freeBlockInBuffer(blk[pos], &buf);
 
-                    if ((blk[pos] = readBlockFromDisk(set_res_out_addr + pos * set_block_num + blk_index, &buf)) == NULL) {
+                    if ((blk[pos] = readBlockFromDisk(set_res_out_addr + pos * set_block_num + blk_index, &buf)) ==
+                        NULL) {
                         perror("Read block failed.\n");
                         return -1;
                     }
@@ -248,7 +250,8 @@ int TPMMS(int addr, int block_num, int set_res_out_addr, int out_addr, int set_b
     return 0;
 }
 
-int IBRSA(int addr, int block_num, int index_out_addr, int out_addr, int value) {
+int IBRS(int addr, int block_num, int index_out_addr, int out_addr, int value) {
+    // Index-based relationship selection
     // 基于索引的关系选择算法
 
     printf("\n****基于索引的关系选择算法****\n");
@@ -289,7 +292,7 @@ int IBRSA(int addr, int block_num, int index_out_addr, int out_addr, int value) 
                 return -1;
             }
 
-            if (readAddress(blk, 7, &addr) == -1) {
+            if (readAddress(blk, 64, &addr) == -1) {
                 perror("Read address failed.\n");
                 return -1;
             }
@@ -318,18 +321,12 @@ int IBRSA(int addr, int block_num, int index_out_addr, int out_addr, int value) 
         int res = -1;
         // 主索引 索引项数量等于数据块数量
         for (int i = 0; i < block_num; i++) {
-            if (i % 7 == 0 && i != 0) {
-                // 要读下一块
-                freeBlockInBuffer(blk, &buf);
-                if ((blk = readBlockFromDisk(index_out_addr + i / 7, &buf)) == NULL) {
-                    perror("Read block failed.\n");
-                    return -1;
-                }
-            }
-
             int val[2];
 
-            readProperty(blk, i % 7, 2, val);
+            if (readProperty(blk, i % 7, 2, val) == -1) {
+                perror("Read property failed.\n");
+                return -1;
+            }
 
             if (val[0] > value && i == 0) {
                 // value 小于最小值，没有满足条件的元组
@@ -343,6 +340,15 @@ int IBRSA(int addr, int block_num, int index_out_addr, int out_addr, int value) 
                 break;
             } else {
                 res = val[1];
+            }
+
+            if (i % 7 == 0 && i != 0) {
+                // 要读下一块
+                freeBlockInBuffer(blk, &buf);
+                if ((blk = readBlockFromDisk(index_out_addr + i / 7, &buf)) == NULL) {
+                    perror("Read block failed.\n");
+                    return -1;
+                }
             }
         }
 
@@ -398,4 +404,149 @@ int IBRSA(int addr, int block_num, int index_out_addr, int out_addr, int value) 
     }
 
     return 0;
+}
+
+int RP(int addr, int block_num, int out_addr) {
+    // Relation projection
+    // 关系投影算法
+    // R.A 的值域为 [1, 40]
+
+    printf("\n****关系投影算法****\n");
+
+    char set[40] = {0 * 40};
+
+    Buffer buf;
+
+    if (!initBuffer(520, 64, &buf)) {
+        perror("Buffer init failed.\n");
+        return -1;
+    }
+
+    unsigned char *blk;
+
+    if ((blk = readBlockFromDisk(addr, &buf)) == NULL) {
+        perror("Read block failed.\n");
+        return -1;
+    }
+    printf("读入数据块 %d.blk.\n", addr++);
+
+    int i = 0;
+    int val[2];
+
+    OutBlk out_blk;
+    if (InitOutBlock(&out_blk, &buf, 14, out_addr) == -1) {
+        perror("Out block init failed.\n");
+        return -1;
+    }
+
+    int p_val;
+    int res_count = 0;
+
+    while (readProperty(blk, i % 7, 2, val) != -1) {
+        if (set[val[0] - 1] == 0) {
+            set[val[0] - 1] = 1;
+            printf("(R.A = %d)\n", val[0]);
+            putInOutBlock(&out_blk, &buf, 1, &val[0]);
+        }
+
+        i++;
+
+        if (i / 7 >= block_num) {
+            break;
+        }
+
+        if (i % 7 == 0 && i != 0) {
+            // 读下一个数据块
+            freeBlockInBuffer(blk, &buf);
+
+            if ((blk = readBlockFromDisk(addr, &buf)) == NULL) {
+                perror("Read block failed.\n");
+                return -1;
+            }
+            printf("读入数据块 %d.blk.\n", addr++);
+        }
+    }
+
+
+    freeOutBlockInBuffer(&out_blk, &buf);
+
+    return 0;
+}
+
+int SBCO(int r_addr, int s_addr, int r_block_num, int s_block_num, int out_addr) {
+    // Sort-based join operation
+    // 基于排序的连接操作算法
+
+    printf("\n****基于排序的连接操作算法****\n");
+
+    Buffer buf;
+
+    if (!initBuffer(520, 64, &buf)) {
+        perror("Buffer init failed.\n");
+        return -1;
+    }
+
+    OutBlk out_blk;
+    if (InitOutBlock(&out_blk, &buf, 7, 401) == -1) {
+        perror("Out block init failed.\n");
+        return -1;
+    }
+
+    int i = 0, j = 0;
+
+    int s_start = -1;
+
+    unsigned char *r_blk, *s_blk;
+
+    if ((r_blk = readBlockFromDisk(r_addr++, &buf)) == NULL) {
+        perror("Read block failed.\n");
+        return -1;
+    }
+
+    if ((s_blk = readBlockFromDisk(s_addr++, &buf)) == NULL) {
+        perror("Read block failed.\n");
+        return -1;
+    }
+
+    int r_val[2], s_val[2];
+
+    while (readProperty(r_blk, i % 7, 2, r_val) != -1 && readProperty(s_blk, j % 7, 2, s_val) != -1) {
+        if (r_val[0] < s_val[0]) {
+            i++;
+        } else if (r_val[0] == s_val[0]) {
+            if (s_start == -1) {
+                s_start = j;
+            } else {
+                j = s_start;
+            }
+            putInOutBlock(&out_blk, &buf, 2, s_val);
+            putInOutBlock(&out_blk, &buf, 2, r_val);
+            j++;
+        } else {
+            s_start = -1;
+            j++;
+        }
+
+        if (i / 7 >= r_block_num || j / 7 >= s_block_num) {
+            break;
+        }
+
+        if (i % 7 == 0 && i != 0) {
+            freeBlockInBuffer(r_blk, &buf);
+
+            if ((r_blk = readBlockFromDisk(r_addr++, &buf)) == NULL) {
+                perror("Read block failed.\n");
+                return -1;
+            }
+        }
+
+        if (j % 7 == 0 && j != 0) {
+            freeBlockInBuffer(s_blk, &buf);
+
+            if ((s_blk = readBlockFromDisk(s_addr++, &buf)) == NULL) {
+                perror("Read block failed.\n");
+                return -1;
+            }
+        }
+    }
 }

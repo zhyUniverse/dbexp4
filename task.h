@@ -5,10 +5,14 @@
 #ifndef DBEXP4_TASK_H
 #define DBEXP4_TASK_H
 
-int RSABLS(int addr, int out_addr, int block_num);
+int RSBLS(int addr, int out_addr, int block_num);
 
 int TPMMS(int addr, int block_num, int set_res_out_addr, int out_addr, int set_block_num);
 
-int IBRSA(int addr, int block_num, int index_out_addr, int out_addr, int value);
+int IBRS(int addr, int block_num, int index_out_addr, int out_addr, int value);
+
+int RPA(int addr, int block_num, int out_addr);
+
+int SBCO(int r_addr, int s_addr, int r_block_num, int s_block_num, int out_addr);
 
 #endif //DBEXP4_TASK_H
