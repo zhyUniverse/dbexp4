@@ -87,6 +87,7 @@ void clearBlock(unsigned char *blk, int size) {
 // 初始化输出缓冲区（实际上是缓冲区里的一个块）
 int InitOutBlock(OutBlk *blk, Buffer *buffer, int size, int addr) {
     blk->blk = getNewBlockInBuffer(buffer);
+    clearBlock(blk->blk, 64);
     if (blk->blk == NULL) {
         perror("Buffer is full.\n");
         return -1;
@@ -112,10 +113,10 @@ int putInOutBlock(OutBlk *blk, Buffer *buffer, int property_num, int *val) {
         }
         printf("写入磁盘 %d.blk\n", blk->out_addr);
         if (InitOutBlock(blk, buffer, blk->size, blk->out_addr + 1) == -1) {
-            clearBlock(blk->blk, 64);
             perror("Out block init failed.\n");
             return -1;
         }
+        clearBlock(blk->blk, 64);
     }
     return 0;
 }
@@ -130,8 +131,9 @@ int freeOutBlockInBuffer(OutBlk *blk, Buffer *buffer) {
         }
         printf("写入磁盘 %d.blk\n", blk->out_addr);
         blk->index = 0;
+    } else {
+        freeBlockInBuffer(blk->blk, buffer);
     }
-    freeBlockInBuffer(blk->blk, buffer);
     return 0;
 }
 
@@ -180,4 +182,45 @@ int cmpInBlock(unsigned char *blk, int tuple_num, int *res) {
     }
 
     return res_pos;
+}
+
+int findIndex(int addr, int block_num, int value, Buffer *buf) {
+    unsigned char *blk;
+
+    int cur_index = -1;
+
+    for (int i = 0; i < block_num; i++) {
+        if ((blk = readBlockFromDisk(addr, buf)) == NULL) {
+            perror("Read block failed.\n");
+            return -1;
+        }
+
+        int val[2];
+
+        for (int j = 0; j < 7; j++) {
+            if (readProperty(blk, j, 2, val) == -1) {
+                perror("Read property failed.\n");
+                return -1;
+            }
+
+            if (val[0] > value && i == 0 && j == 0) {
+                // value 小于最小值
+                return -1;
+            }
+
+            if (val[0] == value && i == 0 && j == 0) {
+                return val[1];
+            }
+            if (val[0] >= value) {
+                return cur_index;
+            } else {
+                cur_index = val[1];
+            }
+        }
+
+        if (readAddress(blk, 7, &addr) == -1) {
+            perror("Read address failed.\n");
+            return -1;
+        }
+    }
 }
