@@ -92,10 +92,6 @@ int TPMMS(int addr, int block_num, int set_res_out_addr, int out_addr, int set_b
     // 子集合的数量
     const int set_num = block_num / set_block_num + (block_num % set_block_num == 0 ? 0 : 1);
 
-    // 每个子集合中各个块的地址
-    // 本实验中块地址是顺序的所以没啥必要
-//    int set_addr[set_num][set_block_num];
-
     int counts[set_num];
 
     {
