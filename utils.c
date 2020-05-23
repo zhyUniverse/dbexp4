@@ -183,7 +183,3 @@ int cmpInBlock(unsigned char *blk, int tuple_num, int *res) {
 
     return res_pos;
 }
-
-int findIndex(int addr, int block_num, int value, Buffer *buf) {
-
-}

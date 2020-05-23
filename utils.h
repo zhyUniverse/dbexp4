@@ -40,6 +40,4 @@ int cmp(const void *a, const void *b);
 
 int cmpInBlock(unsigned char *blk, int tuple_num, int *res);
 
-int findIndex(int addr, int block_num, int value, Buffer *buf);
-
 #endif //DBEXP4_UTILS_H

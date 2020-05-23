@@ -2,3 +2,5 @@
 data
 .gitignore
 cmake-build-debug
+cmake-build-release
+dbexp4.exe
